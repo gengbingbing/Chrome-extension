@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
+  <title>前端数据库-IndexDB</title>
+  <link href="./favicon.png">
+</head>
+<body>
+  <div id="anime_icon" class="anime-icon"></div>
+  <style>
+    @keyframes mouse-in{
+        /*鼠标移入时从第一张移动到最后一张*/
+        from{
+            background-position-y: 0; 
+        }
+        to{
+            background-position-y: -1280px;/*1280px就是图片的总长度，即64px 20张*/
+        }
+    }
+    @keyframes mouse-out{
+        /*鼠标移出时从最后一张移动回第一张*/
+        from{
+            background-position-y: -1280px;
+        }
+        to{
+            background-position-y: 0;
+        }
+    }
+    .anime-icon{
+      width: 64px;/*这个尺寸不能乱动，按照图片的尺寸来*/
+      height: 64px;
+      cursor: pointer;
+      background-image: url('icon.png');
+      background-size: 100%; /*使图片和div的大小匹配*/
+      background-position-y: 0; /*竖直方向上位于第一张图片的位置*/
+    }
+    .anime-icon:hover{
+        /*hover时用0.5s执行mouse-in动画*/
+        animation: mouse-in .5s;
+    
+        /*这一句极其重要，将mouse-in拆成20个步骤执行（还记得我们那张长图总共有多少张小图吗）*/
+        animation-timing-function:steps(20);
+    
+        /*动画执行结束后，停在最后一帧上*/
+        animation-fill-mode:forwards;
+    }
+    .mouse-out-class{
+        /*0.5s执行移出动画*/
+        animation: mouse-out .5s;
+    
+        /*移出动画依然分成20步骤*/
+        animation-timing-function:steps(20);
+    
+        /*动画结束时停在最后一帧*/
+        animation-fill-mode:forwards;
+    }
+  </style>
+  <h1 style="text-align: center;">前端数据库-IndexDB</h1>
+  <article style="margin-bottom: 24px;">
+    最小可以存储250MB的内容, 持久存储，可以用于存储告警信息，业务逻辑数据等！
+  </article>
+  <div class="box">
+    <span>111</span>
+  </div>
+  <style>
+    .box {
+      height: 300px;
+      width: 100%;
+      display: grid;
+      place-items: center;
+      background-color: aqua;
+    }
+    .box span {
+      width: 60px;
+      height: 60px;
+      background-color: red;
+      display: grid;
+      place-items: center;
+    }
+  </style>
+
+  <div class="grid-side">
+    <div>side</div>
+    <div>main</div>
+  </div>
+  <style>
+    .grid-side {
+      display: grid;
+      grid-template-columns: minmax(150px, 25%) 1fr;
+      height: 300px;
+    }
+    .grid-side :first-child {
+      background-color: blue;
+      display: grid;
+      place-items: center;
+    }
+    .grid-side :last-child {
+      background-color: bisque;
+      display: grid;
+      place-items: center;
+    }
+  </style>
+
+  <div class="grid-fill">
+    <div class="item">1</div>
+    <div class="item">2</div>
+    <div class="item">3</div>
+    <div class="item">4</div>
+    <div class="item">5</div>
+    <div class="item">6</div>
+    <div class="item">7</div>
+    <div class="item">8</div>
+    <div class="item">9</div>
+  </div>
+  <style>
+    .grid-fill {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    .grid-fill .item {
+      background-color: brown;
+      margin: 24px;
+      height: 80px;
+      display: grid;
+      place-items: center;
+      color: #FFFFFF;
+    }
+  </style>
+</body>
+<script>
+  let db = {};
+  // 打开数据库
+  const openDB = (dbName, version, storeName) => {
+    let indexedDB = window.indexedDB;
+    
+    // 获取indexDB对象
+    const request = indexedDB.open(dbName, version)
+
+    // 数据库打开成功
+    request.onsuccess = function(event) {
+      // 数据库对象
+      db = event.target.result;
+      console.log('数据库打开成功');
+    }
+    
+    // 数据库打开失败
+    request.onerror = function(event) {
+      console.log('数据库打开报错')
+    }
+    
+    // 无数据库，进行数据库创建
+    request.onupgradeneeded = function(event) {
+      // 数据库创建或升级的时候会触发
+      console.log('数据库创建成功');
+      db = event.target.result;
+      // 创建数据表
+      let objectStore
+      if (!db.objectStoreNames.contains(storeName)) {
+        objectStore = db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true }) // 创建表
+        objectStore.createIndex('idIndex', 'name', { unique: false }) // 创建索引 可以让你搜索任意字段
+      }
+    }
+  }
+ 
+  // 添加数据
+  const addData = (db, storeName, data) => {
+    let request = db.transaction([storeName], 'readwrite') // 事务对象 指定表格名称和操作模式（"只读"或"读写"）
+      .objectStore(storeName) // 仓库对象
+      .add(data)
+  
+    request.onsuccess = function(event) {
+      console.log('数据写入成功')
+    }
+  
+    request.onerror = function(event) {
+      console.log('数据写入失败')
+      throw new Error(event.target.error)
+    }
+  }
+ 
+  // 根据id获取数据
+  const getDataByKey = (db, storeName, key) => {
+    return new Promise((resolve, reject) => {
+      let transaction = db.transaction([storeName]) // 事务
+      let objectStore = transaction.objectStore(storeName) // 仓库对象
+      let request = objectStore.get(key)
+ 
+      request.onerror = function(event) {
+        console.log('事务失败')
+        reject(event)
+      }
+ 
+      request.onsuccess = function(event) {
+        console.log('主键查询结果: ', request.result)
+        resolve(request.result);
+      }
+    })
+  }
+ 
+  //按索引查询
+  const findByIndex = (db, storeName, key) => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([storeName], "readonly");
+      const store = transaction.objectStore(storeName);
+      const index = store?.index("idIndex");
+      const request = index.get(key);
+      request.onerror = function(event) {
+        console.log('事务失败')
+        reject(event)
+      }
+
+      request.onsuccess = function() {
+          const data = request.result;
+          resolve(data);
+      }
+    })
+  }
+
+  // 根据id修改数
+  const updateData = (db, storeName, data) => {
+    let request = db.transaction([storeName], 'readwrite') // 事务对象
+      .objectStore(storeName) // 仓库对象
+      .put(data)
+ 
+    request.onsuccess = function() {
+      console.log('数据更新成功')
+    }
+ 
+    request.onerror = function() {
+      console.log('数据更新失败')
+    }
+  }
+ 
+  // 根据id删除数据
+  const deleteData = (db, storeName, id) => {
+    let request = db.transaction([storeName], 'readwrite').objectStore(storeName).delete(id)
+ 
+    request.onsuccess = function() {
+      console.log('数据删除成功')
+    }
+ 
+    request.onerror = function() {
+      console.log('数据删除失败')
+    }
+  }
+ 
+  // 打开数据库
+  let dbName = 'dbName', version = 2, storeName = 'biaoName'
+  openDB(dbName, version, storeName);
+  
+  // 由于打开indexDB是异步的加个定时器避免 db对象还没获取到值导致 报错
+  setTimeout(() => {
+    console.log(db)
+    addData(db, storeName, {
+      id: (new Date).getTime(), // 必须且值唯一
+      name: '张三',
+      age: 18,
+      desc: 'helloWord'
+    })
+
+    getDataByKey(db, storeName, 1).then(res => {
+      console.log(res)
+    })
+ 
+ 
+    updateData(db, storeName, {id: 1663048566051, desc: '修改的内容', indexDB: '11111'})
+
+    // deleteData(db, storeName, 2)
+
+    findByIndex(db, storeName, '张三').then(res => {
+      console.log(res)
+    })
+  }, 1000)
+ 
+</script>
+</html>

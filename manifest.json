@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "腾宇",
+  "description": "第一个Chrome扩展",
+  "version": "0.0.1",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "icons": {
+    "16": "images/logo-small.png",
+    "48": "images/logo-small48.png",
+    "128": "images/logo-small128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/index.js"],
+      "css": ["css/index.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "permissions": [
+    "contextMenus",
+    "notifications",
+    "tabs",
+    "history"
+  ]
+}
